@@ -6,7 +6,6 @@
 // Later we shall make better supervisor creation modules that are safer and
 // nicer to use.
 //
-
 import gleam/atom.{Atom}
 import gleam/dynamic
 import gleam/list
@@ -17,19 +16,16 @@ pub type Strategy {
   OneForOne
   OneForAll
   RestForOne
-};
+}
 
 pub type Restart {
   Permanent
   Transient
   Temporary
-};
+}
 
 pub type ChildSpec(msg) {
-  SupervisorSpec(
-    id: String,
-    start: fn() -> Result(Pid(msg), String),
-  )
+  SupervisorSpec(id: String, start: fn() -> Result(Pid(msg), String))
 
   WorkerSpec(
     id: String,
@@ -37,11 +33,12 @@ pub type ChildSpec(msg) {
     restart: Restart,
     shutdown: Int,
   )
-};
+}
 
-pub external fn make_child_opaque(spec: ChildSpec(msg))
-  -> ChildSpec(UnknownMessage)
-  = "gleam@dynamic" "unsafe_coerce"
+pub external fn make_child_opaque(
+  spec: ChildSpec(msg),
+) -> ChildSpec(UnknownMessage) =
+  "gleam@dynamic" "unsafe_coerce"
 
 pub type Spec {
   Spec(
@@ -52,9 +49,8 @@ pub type Spec {
   )
 }
 
-external fn erl_start_link(Atom, Spec)
-  -> Result(Pid(UnknownMessage), String)
-  = "supervisor" "start_link"
+external fn erl_start_link(Atom, Spec) -> Result(Pid(UnknownMessage), String) =
+  "supervisor" "start_link"
 
 pub fn start_link(spec: Spec) -> Result(Pid(UnknownMessage), String) {
   erl_start_link(atom.create_from_string("gleam@otp@basic_supervisor"), spec)
@@ -63,7 +59,7 @@ pub fn start_link(spec: Spec) -> Result(Pid(UnknownMessage), String) {
 // nodoc
 pub type Modules {
   Dynamic
-};
+}
 
 // nodoc
 pub fn call(f) {
@@ -74,45 +70,69 @@ pub fn call(f) {
 pub type ChildType {
   Supervisor
   Worker
-};
+}
 
 type InfinityTimeout {
   Infinity
-};
+}
 
 // nodoc
-pub fn init(spec: Spec)
-  -> Result(
+pub fn init(
+  spec: Spec,
+) -> Result(
+  tuple(
+    tuple(Strategy, Int, Int),
+    List(
       tuple(
-        tuple(Strategy, Int, Int),
-        List(tuple(
-          String, // id
-          tuple(Atom, Atom, List(dynamic.Dynamic)), // start
-          Restart, // restart
-          Int, // shutdown
-          ChildType, // type
-          Modules, // modules
-        )),
+        String,
+        tuple(Atom, Atom, List(dynamic.Dynamic)),
+        Restart,
+        Int,
+        ChildType,
+        Modules,
       ),
-      String,
-    )
-{
+    ),
+  ),
+  String,
+) {
+  // id
+  // start
+  // restart
+  // shutdown
+  // type
+  // modules
   let Spec(strategy, intensity, period, children) = spec
   let mod = atom.create_from_string("gleam@otp@basic_supervisor")
   let mod_fn = atom.create_from_string("call")
-  let mfa = fn(start) {
-    tuple(mod, mod_fn, [dynamic.from(start)])
-  }
-  Ok(tuple(
-    tuple(strategy, intensity, period),
-    list.map(children, fn(child_spec) {
-      case child_spec {
-        WorkerSpec(id, start, restart, shutdown) ->
-          tuple(id, mfa(start), restart, shutdown, Worker, Dynamic)
+  let mfa = fn(start) { tuple(mod, mod_fn, [dynamic.from(start)]) }
+  Ok(
+    tuple(
+      tuple(strategy, intensity, period),
+      list.map(
+        children,
+        fn(child_spec) {
+          case child_spec {
+            WorkerSpec(
+              id,
+              start,
+              restart,
+              shutdown,
+            ) -> tuple(id, mfa(start), restart, shutdown, Worker, Dynamic)
 
-        SupervisorSpec(id, start)  ->
-          tuple(id, mfa(start), Permanent, dynamic.unsafe_coerce(Infinity), Supervisor, Dynamic)
-      }
-    }),
-  ))
+            SupervisorSpec(
+              id,
+              start,
+            ) -> tuple(
+              id,
+              mfa(start),
+              Permanent,
+              dynamic.unsafe_coerce(dynamic.from(Infinity)),
+              Supervisor,
+              Dynamic,
+            )
+          }
+        },
+      ),
+    ),
+  )
 }

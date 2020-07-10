@@ -1,12 +1,13 @@
 import gleam/dynamic.{Dynamic}
-import gleam/expect
+import gleam/should
 import gleam/list
 import gleam/otp/basic_supervisor
 import gleam/otp/process.{Pid}
 
-external fn unsafe_get_children(Pid(a))
-  -> List(tuple(Dynamic, Pid(b), Dynamic, Dynamic))
-  = "supervisor" "which_children";
+external fn unsafe_get_children(
+  Pid(a),
+) -> List(tuple(Dynamic, Pid(b), Dynamic, Dynamic)) =
+  "supervisor" "which_children"
 
 pub fn start_link_test() {
   let child = fn(id) {
@@ -14,27 +15,26 @@ pub fn start_link_test() {
       strategy: basic_supervisor.OneForOne,
       intensity: 1,
       period: 5,
-      children: []
+      children: [],
     )
-
     basic_supervisor.SupervisorSpec(
       id: id,
       start: fn() { basic_supervisor.start_link(child_sup_spec) },
     )
   }
 
-  let Ok(sup) = basic_supervisor.start_link(basic_supervisor.Spec(
-    strategy: basic_supervisor.OneForOne,
-    intensity: 1,
-    period: 5,
-    children: [
-      child("one"),
-      child("two"),
-      child("three"),
-    ]
-  ))
+  let Ok(
+    sup,
+  ) = basic_supervisor.start_link(
+    basic_supervisor.Spec(
+      strategy: basic_supervisor.OneForOne,
+      intensity: 1,
+      period: 5,
+      children: [child("one"), child("two"), child("three")],
+    ),
+  )
 
   let children = unsafe_get_children(sup)
 
-  expect.equal(list.length(children), 3)
+  should.equal(list.length(children), 3)
 }
