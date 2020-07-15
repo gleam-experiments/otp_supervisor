@@ -1,5 +1,8 @@
 # experimental_otp_supervisor
 
+This library has been merged into the
+[`gleam_otp`](https://github.com/gleam-lang/otp) library.
+
 
 A Gleam program
 
